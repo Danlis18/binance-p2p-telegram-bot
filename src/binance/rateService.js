@@ -48,12 +48,45 @@ export class P2PRateService {
   }
 
   async getMarketRate({ fiat, tradeType, paymentMethod, strategy, amount, inputKind }) {
-    try {
-      const useDeepBook = strategy === 'TOP3';
-      const ads = useDeepBook
-        ? await this.#getDeepAds({ fiat, tradeType, paymentMethod })
-        : await this.#getAds({ fiat, tradeType, paymentMethod });
+    const useMarketWindow = strategy === 'TOP3';
 
+    if (useMarketWindow) {
+      try {
+        const ads = await this.#getDeepAds({ fiat, tradeType, paymentMethod });
+        const selected = selectMarketRate(ads, {
+          tradeType,
+          strategy,
+          amount,
+          inputKind,
+          minCompletionRate: this.minCompletionRate
+        });
+
+        if (!selected || selected.selectedAds.length < 20) {
+          this.logger.warn({
+            fiat,
+            tradeType,
+            amount,
+            inputKind,
+            receivedAds: ads.length,
+            selectedAds: selected?.selectedAds?.length ?? 0
+          }, 'Insufficient P2P depth for exact positions 6-25');
+          throw new Error('Binance P2P did not return enough ads for the 6-25 market average.');
+        }
+
+        return {
+          ...selected,
+          source: 'deep-ads',
+          paymentMethod: paymentMethod ?? null,
+          searchedAt: new Date().toISOString()
+        };
+      } catch (error) {
+        this.logger.warn({ err: error?.message, fiat, tradeType }, 'Exact 6-25 P2P market rate unavailable');
+        throw error;
+      }
+    }
+
+    try {
+      const ads = await this.#getAds({ fiat, tradeType, paymentMethod });
       const selected = selectMarketRate(ads, {
         tradeType,
         strategy,
@@ -64,7 +97,7 @@ export class P2PRateService {
       if (selected) {
         return {
           ...selected,
-          source: useDeepBook ? 'deep-ads' : 'ads',
+          source: 'ads',
           paymentMethod: paymentMethod ?? null,
           searchedAt: new Date().toISOString()
         };
