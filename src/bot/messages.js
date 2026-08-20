@@ -53,34 +53,18 @@ export function resultText({ session, parsed, quote }) {
   const from = parsed.kind === 'asset' ? formatUsdt(parsed.amount) : formatFiat(parsed.amount, session.fiat);
   const converted = parsed.kind === 'asset' ? parsed.amount * rate : parsed.amount / rate;
   const to = parsed.kind === 'asset' ? formatFiat(converted, session.fiat) : formatUsdt(converted);
-  const strategy = RATE_STRATEGIES[session.strategy]?.label ?? session.strategy;
-  const source = quote.source === 'quote'
-    ? 'Binance P2P · швидка котировка'
-    : `Binance P2P · ${strategy}`;
-  const payment = session.paymentMethodName ? ` · ${escapeHtml(session.paymentMethodName)}` : '';
   const searchedAt = formatSearchTimestamp(quote.searchedAt);
 
-  const lines = [
+  return [
     title,
     '',
     `<b>${from} ≈ ${to}</b>`,
     '',
     `Курс: <code>${formatRate(rate, session.fiat)}</code>`,
-    `Джерело: ${source}${payment}`
-  ];
-
-  if (quote.source === 'deep-ads') {
-    const count = quote.selectedAds.length;
-    const end = quote.windowEnd ?? (5 + count);
-    lines.push(`📊 Аналіз: пропущено перші <b>5</b> · позиції <b>6–${end}</b> · середнє по <b>${count}</b> огол.`);
-  }
-
-  if (quote.qualityRelaxed) {
-    lines.push('⚠️ Для цієї суми не вистачило оголошень із заданим quality-фільтром — використано доступні валідні оголошення.');
-  }
-
-  lines.push('', `🕒 <b>Пошук курсу:</b> ${searchedAt} · Київ`);
-  return lines.join('\n');
+    'Джерело: Binance P2P',
+    '',
+    `🕒 <b>Пошук курсу:</b> ${searchedAt} · Київ`
+  ].join('\n');
 }
 
 export const helpText = [
