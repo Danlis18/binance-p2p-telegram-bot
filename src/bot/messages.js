@@ -1,6 +1,20 @@
 import { RATE_STRATEGIES, fiatInfo } from '../domain/currencies.js';
 import { escapeHtml, formatFiat, formatRate, formatUsdt } from '../utils/format.js';
 
+function formatSearchTimestamp(value) {
+  const date = value ? new Date(value) : new Date();
+  return new Intl.DateTimeFormat('uk-UA', {
+    timeZone: 'Europe/Kyiv',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).format(date).replace(',', '');
+}
+
 export function welcomeText(session) {
   const fiat = fiatInfo(session.fiat);
   return [
@@ -44,6 +58,7 @@ export function resultText({ session, parsed, quote }) {
     ? `Binance P2P · ${strategy}${quote.selectedAds.length ? ` · ${quote.selectedAds.length} огол.` : ''}`
     : 'Binance P2P · швидка котировка';
   const payment = session.paymentMethodName ? ` · ${escapeHtml(session.paymentMethodName)}` : '';
+  const searchedAt = formatSearchTimestamp(quote.searchedAt);
 
   const lines = [
     title,
@@ -57,11 +72,8 @@ export function resultText({ session, parsed, quote }) {
   if (quote.qualityRelaxed) {
     lines.push('⚠️ Для цієї суми не вистачило оголошень із заданим quality-фільтром — використано доступні валідні оголошення.');
   }
-  if (quote.source === 'quote') {
-    lines.push('ℹ️ Не знайдено оголошення, що точно підходить під ліміт суми; показана індикативна P2P-котировка.');
-  }
 
-  lines.push('', '<i>Курс динамічний і може змінитися до моменту угоди.</i>');
+  lines.push('', `🕒 <b>Пошук курсу:</b> ${searchedAt} · Київ`);
   return lines.join('\n');
 }
 
