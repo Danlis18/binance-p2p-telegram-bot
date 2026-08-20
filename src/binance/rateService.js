@@ -25,6 +25,20 @@ export class P2PRateService {
     return this.cache.set(key, ads, 6_000);
   }
 
+  async #getDeepAds({ fiat, tradeType, paymentMethod }) {
+    const key = `deep-ads:${fiat}:${tradeType}:${paymentMethod ?? 'ALL'}`;
+    const cached = this.cache.get(key);
+    if (cached) return cached;
+    const ads = await this.client.getDeepAds({
+      fiat,
+      tradeType,
+      paymentMethod,
+      pages: 3,
+      rows: 20
+    });
+    return this.cache.set(key, ads, 6_000);
+  }
+
   async #getQuote({ fiat, tradeType }) {
     const key = `quote:${fiat}:${tradeType}`;
     const cached = this.cache.get(key);
@@ -35,7 +49,11 @@ export class P2PRateService {
 
   async getMarketRate({ fiat, tradeType, paymentMethod, strategy, amount, inputKind }) {
     try {
-      const ads = await this.#getAds({ fiat, tradeType, paymentMethod });
+      const useDeepBook = strategy === 'MARKET20';
+      const ads = useDeepBook
+        ? await this.#getDeepAds({ fiat, tradeType, paymentMethod })
+        : await this.#getAds({ fiat, tradeType, paymentMethod });
+
       const selected = selectMarketRate(ads, {
         tradeType,
         strategy,
@@ -46,14 +64,14 @@ export class P2PRateService {
       if (selected) {
         return {
           ...selected,
-          source: 'ads',
+          source: useDeepBook ? 'deep-ads' : 'ads',
           paymentMethod: paymentMethod ?? null,
           searchedAt: new Date().toISOString()
         };
       }
-      this.logger.info({ fiat, tradeType, amount, inputKind }, 'No amount-matched P2P ads, using quote fallback');
+      this.logger.info({ fiat, tradeType, strategy, amount, inputKind }, 'No amount-matched P2P ads, using quote fallback');
     } catch (error) {
-      this.logger.warn({ err: error?.message, fiat, tradeType }, 'P2P ad list unavailable, using quote fallback');
+      this.logger.warn({ err: error?.message, fiat, tradeType, strategy }, 'P2P ad list unavailable, using quote fallback');
     }
 
     const rate = await this.#getQuote({ fiat, tradeType });
@@ -62,6 +80,8 @@ export class P2PRateService {
       selectedAds: [],
       qualityRelaxed: false,
       requestedCount: 0,
+      skippedCount: 0,
+      eligibleCount: 0,
       source: 'quote',
       paymentMethod: paymentMethod ?? null,
       searchedAt: new Date().toISOString()
