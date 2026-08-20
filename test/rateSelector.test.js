@@ -12,7 +12,7 @@ const ads = [
 
 const deepAds = Array.from({ length: 30 }, (_, index) => ({
   price: index + 1,
-  minFiat: 0,
+  minFiat: 1000,
   maxFiat: 1000000,
   availableAsset: 1000000,
   completionRate: 0.99
@@ -48,7 +48,15 @@ test('default SELL strategy skips first 5 and averages positions 6-25', () => {
   assert.equal(result.skippedCount, 5);
 });
 
-test('respects transaction min limit for asset input', () => {
+test('market 6-25 ignores entered amount limits and still uses 20 ads', () => {
+  const result = selectMarketRate(deepAds, { tradeType: 'SELL', strategy: 'TOP3', amount: 113, inputKind: 'fiat', minCompletionRate: 0.9 });
+  assert.equal(result.selectedAds.length, 20);
+  assert.equal(result.selectedAds[0].price, 25);
+  assert.equal(result.selectedAds[19].price, 6);
+  assert.equal(result.rate, 15.5);
+});
+
+test('respects transaction min limit for asset input in BEST mode', () => {
   const result = selectMarketRate(ads, { tradeType: 'BUY', strategy: 'BEST', amount: 5, inputKind: 'asset', minCompletionRate: 0.9 });
   assert.equal(result.rate, 40.3);
 });
