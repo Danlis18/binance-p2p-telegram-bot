@@ -9,7 +9,7 @@ const schema = z.object({
   ALLOWED_USER_IDS: z.string().optional().default(''),
   DEFAULT_FIAT: z.enum(Object.keys(FIATS)).default('UAH'),
   DEFAULT_MODE: z.enum(['BUY', 'SELL']).default('BUY'),
-  DEFAULT_RATE_STRATEGY: z.enum(Object.keys(RATE_STRATEGIES)).default('MARKET20'),
+  DEFAULT_RATE_STRATEGY: z.enum(Object.keys(RATE_STRATEGIES)).default('TOP3'),
   MIN_COMPLETION_RATE: boolNumber.default(0.9),
   BINANCE_BASE_URL: z.string().url().default('https://www.binance.com'),
   BINANCE_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(8000),
