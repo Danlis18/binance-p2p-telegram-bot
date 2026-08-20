@@ -10,6 +10,14 @@ const ads = [
   { price: 41.0, minFiat: 100, maxFiat: 50000, availableAsset: 1000, completionRate: 0.50 }
 ];
 
+const deepAds = Array.from({ length: 30 }, (_, index) => ({
+  price: index + 1,
+  minFiat: 0,
+  maxFiat: 1000000,
+  availableAsset: 1000000,
+  completionRate: 0.99
+}));
+
 test('BUY best chooses lowest eligible quality price', () => {
   const result = selectMarketRate(ads, { tradeType: 'BUY', strategy: 'BEST', amount: 1000, inputKind: 'fiat', minCompletionRate: 0.9 });
   assert.equal(result.rate, 40.2);
@@ -20,10 +28,24 @@ test('SELL best chooses highest eligible quality price', () => {
   assert.equal(result.rate, 40.4);
 });
 
-test('TOP3 averages three ranked eligible ads', () => {
-  const result = selectMarketRate(ads, { tradeType: 'BUY', strategy: 'TOP3', amount: 1000, inputKind: 'fiat', minCompletionRate: 0.9 });
-  assert.equal(Number(result.rate.toFixed(2)), 40.3);
-  assert.equal(result.selectedAds.length, 3);
+test('default BUY strategy skips first 5 and averages positions 6-25', () => {
+  const result = selectMarketRate(deepAds, { tradeType: 'BUY', strategy: 'TOP3', amount: 1000, inputKind: 'fiat', minCompletionRate: 0.9 });
+  assert.equal(result.selectedAds.length, 20);
+  assert.equal(result.selectedAds[0].price, 6);
+  assert.equal(result.selectedAds[19].price, 25);
+  assert.equal(result.rate, 15.5);
+  assert.equal(result.skippedCount, 5);
+  assert.equal(result.windowStart, 6);
+  assert.equal(result.windowEnd, 25);
+});
+
+test('default SELL strategy skips first 5 and averages positions 6-25', () => {
+  const result = selectMarketRate(deepAds, { tradeType: 'SELL', strategy: 'TOP3', amount: 1000, inputKind: 'fiat', minCompletionRate: 0.9 });
+  assert.equal(result.selectedAds.length, 20);
+  assert.equal(result.selectedAds[0].price, 25);
+  assert.equal(result.selectedAds[19].price, 6);
+  assert.equal(result.rate, 15.5);
+  assert.equal(result.skippedCount, 5);
 });
 
 test('respects transaction min limit for asset input', () => {
