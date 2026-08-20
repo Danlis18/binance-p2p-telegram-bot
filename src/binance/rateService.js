@@ -49,7 +49,7 @@ export class P2PRateService {
 
   async getMarketRate({ fiat, tradeType, paymentMethod, strategy, amount, inputKind }) {
     try {
-      const useDeepBook = strategy === 'MARKET20';
+      const useDeepBook = strategy === 'TOP3';
       const ads = useDeepBook
         ? await this.#getDeepAds({ fiat, tradeType, paymentMethod })
         : await this.#getAds({ fiat, tradeType, paymentMethod });
