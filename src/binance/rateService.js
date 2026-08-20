@@ -47,7 +47,8 @@ export class P2PRateService {
         return {
           ...selected,
           source: 'ads',
-          paymentMethod: paymentMethod ?? null
+          paymentMethod: paymentMethod ?? null,
+          searchedAt: new Date().toISOString()
         };
       }
       this.logger.info({ fiat, tradeType, amount, inputKind }, 'No amount-matched P2P ads, using quote fallback');
@@ -62,7 +63,8 @@ export class P2PRateService {
       qualityRelaxed: false,
       requestedCount: 0,
       source: 'quote',
-      paymentMethod: paymentMethod ?? null
+      paymentMethod: paymentMethod ?? null,
+      searchedAt: new Date().toISOString()
     };
   }
 }
