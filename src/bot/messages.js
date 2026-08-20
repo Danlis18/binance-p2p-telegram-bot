@@ -54,9 +54,9 @@ export function resultText({ session, parsed, quote }) {
   const converted = parsed.kind === 'asset' ? parsed.amount * rate : parsed.amount / rate;
   const to = parsed.kind === 'asset' ? formatFiat(converted, session.fiat) : formatUsdt(converted);
   const strategy = RATE_STRATEGIES[session.strategy]?.label ?? session.strategy;
-  const source = quote.source === 'ads'
-    ? `Binance P2P · ${strategy}${quote.selectedAds.length ? ` · ${quote.selectedAds.length} огол.` : ''}`
-    : 'Binance P2P · швидка котировка';
+  const source = quote.source === 'quote'
+    ? 'Binance P2P · швидка котировка'
+    : `Binance P2P · ${strategy}`;
   const payment = session.paymentMethodName ? ` · ${escapeHtml(session.paymentMethodName)}` : '';
   const searchedAt = formatSearchTimestamp(quote.searchedAt);
 
@@ -68,6 +68,12 @@ export function resultText({ session, parsed, quote }) {
     `Курс: <code>${formatRate(rate, session.fiat)}</code>`,
     `Джерело: ${source}${payment}`
   ];
+
+  if (quote.source === 'deep-ads') {
+    const count = quote.selectedAds.length;
+    const end = quote.windowEnd ?? (5 + count);
+    lines.push(`📊 Аналіз: пропущено перші <b>5</b> · позиції <b>6–${end}</b> · середнє по <b>${count}</b> огол.`);
+  }
 
   if (quote.qualityRelaxed) {
     lines.push('⚠️ Для цієї суми не вистачило оголошень із заданим quality-фільтром — використано доступні валідні оголошення.');
