@@ -68,7 +68,11 @@ export function createBot({ config, rateService, logger }) {
 
   bot.action('menu:rate', async (ctx) => {
     await ctx.answerCbQuery();
-    await safeEdit(ctx, '📊 <b>Як рахувати P2P-курс?</b>\n\nTOP‑3 — рекомендований баланс між найкращою ціною та реальністю ринку.', rateKeyboard(ctx.session.strategy));
+    await safeEdit(
+      ctx,
+      '📊 <b>Як рахувати P2P-курс?</b>\n\n<b>Середній 6–25</b> — пропускаємо перші 5 оголошень Binance P2P і рахуємо середнє по наступних 20.',
+      rateKeyboard(ctx.session.strategy)
+    );
   });
 
   bot.action('menu:payment', async (ctx) => {
