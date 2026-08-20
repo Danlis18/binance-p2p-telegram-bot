@@ -14,61 +14,52 @@ export function isAdEligible(ad, { amount, inputKind, minCompletionRate = 0 }) {
   return true;
 }
 
-function passesQuality(ad, minCompletionRate) {
-  return ad.completionRate === null || ad.completionRate === undefined || ad.completionRate >= minCompletionRate;
-}
-
 function rank(ads, tradeType) {
   return [...ads].sort((a, b) => tradeType === 'BUY' ? a.price - b.price : b.price - a.price);
 }
 
-function strategyWindow(strategy) {
-  if (strategy === 'BEST') return { skip: 0, take: 1 };
-  if (strategy === 'TOP5') return { skip: 0, take: 5 };
-  return { skip: 5, take: 20 };
-}
-
 export function selectMarketRate(ads, { tradeType, strategy, amount, inputKind, minCompletionRate = 0.9 }) {
-  const isMarketWindow = strategy === 'TOP3';
-  let eligible;
-  let qualityRelaxed = false;
+  // Market benchmark: preserve Binance's own ordering exactly as returned by the P2P search.
+  // Skip displayed positions 1–5 and average displayed positions 6–25.
+  // Do not re-sort, do not pre-filter by amount limits, and do not pre-filter by completion rate,
+  // because any of those operations would change the positions compared with the live Binance list.
+  if (strategy === 'TOP3') {
+    const selected = ads.slice(5, 25);
+    if (selected.length < 20) return null;
 
-  if (isMarketWindow) {
-    // The 6–25 strategy is a market benchmark, not an executable quote for the entered amount.
-    // Do NOT filter by min/max transaction limits before taking positions 6–25,
-    // otherwise small inputs (e.g. 113 UAH) collapse the book to a few outlier ads.
-    const quality = ads.filter((ad) => passesQuality(ad, minCompletionRate));
-    if (quality.length >= 25) {
-      eligible = quality;
-    } else {
-      eligible = ads;
-      qualityRelaxed = true;
-    }
-  } else {
-    const quality = ads.filter((ad) => isAdEligible(ad, { amount, inputKind, minCompletionRate }));
-    eligible = quality.length > 0
-      ? quality
-      : ads.filter((ad) => isAdEligible(ad, { amount, inputKind, minCompletionRate: 0 }));
-    qualityRelaxed = quality.length === 0;
+    const rate = selected.reduce((sum, ad) => sum + ad.price, 0) / selected.length;
+    return {
+      rate,
+      selectedAds: selected,
+      qualityRelaxed: false,
+      requestedCount: 20,
+      skippedCount: 5,
+      eligibleCount: ads.length,
+      windowStart: 6,
+      windowEnd: 25
+    };
   }
+
+  const quality = ads.filter((ad) => isAdEligible(ad, { amount, inputKind, minCompletionRate }));
+  const eligible = quality.length > 0
+    ? quality
+    : ads.filter((ad) => isAdEligible(ad, { amount, inputKind, minCompletionRate: 0 }));
 
   if (eligible.length === 0) return null;
 
   const ranked = rank(eligible, tradeType);
-  const { skip, take } = strategyWindow(strategy);
-  const selected = ranked.slice(skip, skip + take);
-  if (selected.length === 0) return null;
-
+  const take = strategy === 'BEST' ? 1 : 5;
+  const selected = ranked.slice(0, take);
   const rate = selected.reduce((sum, ad) => sum + ad.price, 0) / selected.length;
 
   return {
     rate,
     selectedAds: selected,
-    qualityRelaxed,
+    qualityRelaxed: quality.length === 0,
     requestedCount: take,
-    skippedCount: Math.min(skip, ranked.length),
+    skippedCount: 0,
     eligibleCount: ranked.length,
-    windowStart: skip + 1,
-    windowEnd: skip + selected.length
+    windowStart: 1,
+    windowEnd: selected.length
   };
 }
