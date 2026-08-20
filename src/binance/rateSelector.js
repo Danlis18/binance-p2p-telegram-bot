@@ -14,6 +14,10 @@ export function isAdEligible(ad, { amount, inputKind, minCompletionRate = 0 }) {
   return true;
 }
 
+function passesQuality(ad, minCompletionRate) {
+  return ad.completionRate === null || ad.completionRate === undefined || ad.completionRate >= minCompletionRate;
+}
+
 function rank(ads, tradeType) {
   return [...ads].sort((a, b) => tradeType === 'BUY' ? a.price - b.price : b.price - a.price);
 }
@@ -25,10 +29,28 @@ function strategyWindow(strategy) {
 }
 
 export function selectMarketRate(ads, { tradeType, strategy, amount, inputKind, minCompletionRate = 0.9 }) {
-  const quality = ads.filter((ad) => isAdEligible(ad, { amount, inputKind, minCompletionRate }));
-  const eligible = quality.length > 0
-    ? quality
-    : ads.filter((ad) => isAdEligible(ad, { amount, inputKind, minCompletionRate: 0 }));
+  const isMarketWindow = strategy === 'TOP3';
+  let eligible;
+  let qualityRelaxed = false;
+
+  if (isMarketWindow) {
+    // The 6–25 strategy is a market benchmark, not an executable quote for the entered amount.
+    // Do NOT filter by min/max transaction limits before taking positions 6–25,
+    // otherwise small inputs (e.g. 113 UAH) collapse the book to a few outlier ads.
+    const quality = ads.filter((ad) => passesQuality(ad, minCompletionRate));
+    if (quality.length >= 25) {
+      eligible = quality;
+    } else {
+      eligible = ads;
+      qualityRelaxed = true;
+    }
+  } else {
+    const quality = ads.filter((ad) => isAdEligible(ad, { amount, inputKind, minCompletionRate }));
+    eligible = quality.length > 0
+      ? quality
+      : ads.filter((ad) => isAdEligible(ad, { amount, inputKind, minCompletionRate: 0 }));
+    qualityRelaxed = quality.length === 0;
+  }
 
   if (eligible.length === 0) return null;
 
@@ -42,7 +64,7 @@ export function selectMarketRate(ads, { tradeType, strategy, amount, inputKind, 
   return {
     rate,
     selectedAds: selected,
-    qualityRelaxed: quality.length === 0,
+    qualityRelaxed,
     requestedCount: take,
     skippedCount: Math.min(skip, ranked.length),
     eligibleCount: ranked.length,
