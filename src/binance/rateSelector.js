@@ -19,10 +19,9 @@ function rank(ads, tradeType) {
 }
 
 function strategyWindow(strategy) {
-  if (strategy === 'MARKET20') return { skip: 5, take: 20 };
   if (strategy === 'BEST') return { skip: 0, take: 1 };
   if (strategy === 'TOP5') return { skip: 0, take: 5 };
-  return { skip: 0, take: 3 };
+  return { skip: 5, take: 20 };
 }
 
 export function selectMarketRate(ads, { tradeType, strategy, amount, inputKind, minCompletionRate = 0.9 }) {
