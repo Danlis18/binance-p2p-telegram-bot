@@ -19,6 +19,7 @@ export const ASSET_ALIASES = Object.freeze([
 ]);
 
 export const RATE_STRATEGIES = Object.freeze({
+  MARKET20: { code: 'MARKET20', label: 'Середній 6–25' },
   BEST: { code: 'BEST', label: 'Найкращий' },
   TOP3: { code: 'TOP3', label: 'Середній TOP‑3' },
   TOP5: { code: 'TOP5', label: 'Середній TOP‑5' }
