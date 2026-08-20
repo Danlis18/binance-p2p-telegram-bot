@@ -28,7 +28,7 @@ test('SELL best chooses highest eligible quality price', () => {
   assert.equal(result.rate, 40.4);
 });
 
-test('default BUY strategy skips first 5 and averages positions 6-25', () => {
+test('market strategy preserves Binance order and averages displayed positions 6-25', () => {
   const result = selectMarketRate(deepAds, { tradeType: 'BUY', strategy: 'TOP3', amount: 1000, inputKind: 'fiat', minCompletionRate: 0.9 });
   assert.equal(result.selectedAds.length, 20);
   assert.equal(result.selectedAds[0].price, 6);
@@ -39,21 +39,24 @@ test('default BUY strategy skips first 5 and averages positions 6-25', () => {
   assert.equal(result.windowEnd, 25);
 });
 
-test('default SELL strategy skips first 5 and averages positions 6-25', () => {
+test('market strategy does not reverse or re-sort SELL results', () => {
   const result = selectMarketRate(deepAds, { tradeType: 'SELL', strategy: 'TOP3', amount: 1000, inputKind: 'fiat', minCompletionRate: 0.9 });
   assert.equal(result.selectedAds.length, 20);
-  assert.equal(result.selectedAds[0].price, 25);
-  assert.equal(result.selectedAds[19].price, 6);
+  assert.equal(result.selectedAds[0].price, 6);
+  assert.equal(result.selectedAds[19].price, 25);
   assert.equal(result.rate, 15.5);
-  assert.equal(result.skippedCount, 5);
 });
 
-test('market 6-25 ignores entered amount limits and still uses 20 ads', () => {
+test('market 6-25 ignores entered amount limits', () => {
   const result = selectMarketRate(deepAds, { tradeType: 'SELL', strategy: 'TOP3', amount: 113, inputKind: 'fiat', minCompletionRate: 0.9 });
   assert.equal(result.selectedAds.length, 20);
-  assert.equal(result.selectedAds[0].price, 25);
-  assert.equal(result.selectedAds[19].price, 6);
-  assert.equal(result.rate, 15.5);
+  assert.equal(result.selectedAds[0].price, 6);
+  assert.equal(result.selectedAds[19].price, 25);
+});
+
+test('market 6-25 requires full 20-ad window', () => {
+  const result = selectMarketRate(deepAds.slice(0, 24), { tradeType: 'BUY', strategy: 'TOP3', amount: 1000, inputKind: 'fiat', minCompletionRate: 0.9 });
+  assert.equal(result, null);
 });
 
 test('respects transaction min limit for asset input in BEST mode', () => {
